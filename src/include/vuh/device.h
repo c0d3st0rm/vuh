@@ -49,6 +49,8 @@ namespace vuh {
 		                    )-> vk::Pipeline;
 		auto instance()-> vuh::Instance& { return _instance; }
 		auto releaseComputeCmdBuffer()-> vk::CommandBuffer;
+
+		auto getShaderCorePropertiesAMD()-> vk::PhysicalDeviceShaderCorePropertiesAMD;
 		
 	private: // helpers
 		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physDevice

@@ -41,4 +41,9 @@ namespace vuh {
 	   : std::runtime_error(message)
 	{}
 
+	/// Constructs the exception object with explanatory string.
+	FunctionNotFound::FunctionNotFound(const char* message)
+	   : std::runtime_error(message)
+	{}
+
 } // namespace vuh

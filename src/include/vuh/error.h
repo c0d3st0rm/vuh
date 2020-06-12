@@ -31,4 +31,12 @@ namespace vuh {
 		ExtensionNotFound(const std::string& message);
 		ExtensionNotFound(const char* message);
 	};
+
+	// Exception indicating getProcAddr returned nullptr. This can be thrown
+	// when, for example, an extension is not loaded
+	class FunctionNotFound: public std::runtime_error {
+	public:
+		FunctionNotFound(const std::string& message);
+		FunctionNotFound(const char* message);
+	};
 } // namespace vuh

@@ -183,13 +183,18 @@ namespace vuh {
 		_reporter(flags, VkDebugReportObjectTypeEXT{}, 0, 0, 0 , prefix, message, nullptr);
 	}
 
-	auto Instance::layers() const noexcept-> const std::vector<const char*>
+	auto Instance::layers() const noexcept-> const std::vector<const char*>&
 	{
 		return _layers;
 	}
 
-	auto Instance::extensions() const noexcept-> const std::vector<const char*>
+	auto Instance::extensions() const noexcept-> const std::vector<const char*>&
 	{
 		return _extensions;
+	}
+
+	auto Instance::instance() noexcept-> vk::Instance&
+	{
+		return _instance;
 	}
 } // namespace vuh

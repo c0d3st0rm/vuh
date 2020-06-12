@@ -279,4 +279,13 @@ namespace vuh {
 
 	/// @return handle to command buffer for syncronous transfer commands
 	auto Device::transferCmdBuffer()-> vk::CommandBuffer& { return _cmdbuf_transfer; }
+
+	/// @return vk::PhysicalDeviceShaderCorePropertiesAMD structure
+	auto Device::getShaderCorePropertiesAMD()-> vk::PhysicalDeviceShaderCorePropertiesAMD {
+		vk::PhysicalDeviceProperties2 physicalDeviceProperties;
+		vk::PhysicalDeviceShaderCorePropertiesAMD shaderCoreProperties;
+		physicalDeviceProperties.pNext = (vk::PhysicalDeviceProperties2*) &shaderCoreProperties;
+		_physdev.getProperties2(&physicalDeviceProperties);
+		return shaderCoreProperties;
+	}
 } // namespace vuh

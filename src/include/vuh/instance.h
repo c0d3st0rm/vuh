@@ -34,8 +34,9 @@ namespace vuh {
 		auto report(const char* prefix, const char* message
 		            , VkDebugReportFlagsEXT flags=VK_DEBUG_REPORT_INFORMATION_BIT_EXT) const-> void;
 
-		auto layers() const noexcept-> const std::vector<const char*>;
-		auto extensions() const noexcept-> const std::vector<const char*>;
+		auto layers() const noexcept-> const std::vector<const char*>&;
+		auto extensions() const noexcept-> const std::vector<const char*>&;
+		auto instance() noexcept-> vk::Instance&;
 
 	private: // helpers
 		auto clear() noexcept-> void;
