@@ -1,15 +1,38 @@
 #include <vuh/device.h>
+#include <vuh/error.h>
+#include <vuh/internal/utils.h>
 
 #include <cassert>
 #include <cstdint>
 #include <limits>
 
 namespace {
+	/// Vendor-specific extensions which provide useful features
+	static const std::array<const char*, 1> vendor_device_extensions = {"VK_AMD_shader_core_properties"};
+
+	/// Filter through the device's extensions
+	auto filter_extensions(vk::PhysicalDevice& physicalDevice, const std::vector<const char*>& extensions
+						, bool add_available_vendor=true, bool all_required=true) {
+		const auto avail_extensions = physicalDevice.enumerateDeviceExtensionProperties();
+		auto r = filter_list({}, extensions, avail_extensions
+		                     , [](const auto& e){return e.extensionName;});
+		
+		if (all_required && extensions.size() != r.size())
+			find_missing_and_throw<vuh::ExtensionNotFound>(extensions, r);
+
+		// Add vendor extensions if they exist
+		r = filter_list(std::move(r), vendor_device_extensions, avail_extensions
+		                , [](const auto& l){return l.extensionName;});
+			
+		return r;
+	}
+
 	/// Create logical device.
 	/// Compute and transport queue family id may point to the same queue.
 	auto createDevice(const vk::PhysicalDevice& physicalDevice ///< physical device to wrap
 	                  , uint32_t compute_family_id             ///< index of queue family supporting compute operations
 	                  , uint32_t transfer_family_id            ///< index of queue family supporting transfer operations
+					  , const std::vector<const char*>& extensions ///< list of device extensions
 	                  )-> vk::Device
 	{
 		// When creating the device specify what queues it has
@@ -23,7 +46,8 @@ namespace {
 			                                        , transfer_family_id, 1, &p);
 			n_queues += 1;
 		}
-		auto devCI = vk::DeviceCreateInfo(vk::DeviceCreateFlags(), n_queues, queueCIs.data());
+		auto devCI = vk::DeviceCreateInfo(vk::DeviceCreateFlags(), n_queues, queueCIs.data(),
+						0, nullptr, extensions.size(), extensions.data());
 
 		return physicalDevice.createDevice(devCI, nullptr);
 	}
@@ -66,25 +90,29 @@ namespace {
 
 namespace vuh {
 	/// Constructs logical device wrapping the physical device of the given instance.
-	Device::Device(Instance& instance, vk::PhysicalDevice physical_device)
-	   : Device(instance, physical_device, physical_device.getQueueFamilyProperties())
+	Device::Device(Instance& instance, vk::PhysicalDevice physDevice, const std::vector<const char*>& extensions)
+	   : Device(instance, physDevice, physDevice.getQueueFamilyProperties(), extensions)
 	{}
 
 	/// Helper constructor.
-	Device::Device(Instance& instance, vk::PhysicalDevice physdevice
+	Device::Device(Instance& instance, vk::PhysicalDevice physDevice
 	              , const std::vector<vk::QueueFamilyProperties>& familyProperties
-	              )
-	   : Device(instance, physdevice, getFamilyID(familyProperties, vk::QueueFlagBits::eCompute)
-	            , getFamilyID(familyProperties, vk::QueueFlagBits::eTransfer))
+	              , const std::vector<const char*>& extensions
+				  )
+	   : Device(instance, physDevice, getFamilyID(familyProperties, vk::QueueFlagBits::eCompute)
+	            , getFamilyID(familyProperties, vk::QueueFlagBits::eTransfer), extensions)
 	{}
 
 	/// Helper constructor
-	Device::Device(Instance& instance, vk::PhysicalDevice physdevice
+	Device::Device(Instance& instance, vk::PhysicalDevice physDevice
 	               , uint32_t computeFamilyId, uint32_t transferFamilyId
+				   , const std::vector<const char*>& extensions
 	               )
-	  : vk::Device(createDevice(physdevice, computeFamilyId, transferFamilyId))
+		// TODO: are the two filter_extensions calls folded into one?
+	  : vk::Device(createDevice(physDevice, computeFamilyId, transferFamilyId, filter_extensions(physDevice, extensions)))
+	  , _extensions(filter_extensions(physDevice, extensions))
 	  , _instance(instance)
-	  , _physdev(physdevice)
+	  , _physdev(physDevice)
 	  , _cmp_family_id(computeFamilyId)
 	  , _tfr_family_id(transferFamilyId)
 	{
@@ -127,7 +155,7 @@ namespace vuh {
 
 	/// Copy constructor. Creates new handle to the same physical device, and recreates associated pools
 	Device::Device(const Device& other)
-	   : Device(other._instance, other._physdev, other._cmp_family_id, other._tfr_family_id)
+	   : Device(other._instance, other._physdev, other._cmp_family_id, other._tfr_family_id, other._extensions)
 	{}
 
 	/// Copy assignment. Created new handle to the same physical device and recreates associated pools.
@@ -139,6 +167,7 @@ namespace vuh {
 	/// Move constructor.
 	Device::Device(Device&& other) noexcept
 	   : vk::Device(std::move(other))
+	   , _extensions(std::move(other._extensions))
 	   , _instance(other._instance)
 	   , _physdev(other._physdev)
 	   , _cmdpool_compute(other._cmdpool_compute)

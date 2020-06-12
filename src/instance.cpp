@@ -1,14 +1,11 @@
 #include "vuh/instance.h"
 #include "vuh/device.h"
 #include "vuh/error.h"
+#include "vuh/internal/utils.h"
 
 #include <algorithm>
 #include <array>
 #include <iostream>
-
-using std::begin; using std::end;
-#define ALL(c) begin(c), end(c)
-#define ARR_VIEW(x) uint32_t(x.size()), x.data()
 
 namespace {
 #ifndef NDEBUG
@@ -18,50 +15,6 @@ namespace {
 	static const std::array<const char*, 0> default_layers = {};
 	static const std::array<const char*, 0> default_extensions = {};
 #endif
-
-	/// Vendor-specific layers and extensions which provide useful features
-	static const std::array<const char*, 1> vendor_layers = {"VK_AMD_shader_core_properties"};
-	static const std::array<const char*, 0> vendor_extensions = {};
-
-	/// @return true if value x can be extracted from an array with a given function
-	template<class U, class F>
-	auto contains(const char* x, const std::vector<U>& array, F&& fun)-> bool {
-		return end(array) != std::find_if(ALL(array), [&](auto& r){return 0 == std::strcmp(x, fun(r));});
-	}
-
-	/// Extend vector of string literals by candidate values that have a macth in a reference set.
-	template<class U, class T, class F>
-	auto filter_list(std::vector<const char*> old_values ///< array to extend
-	                 , const U& tst_values               ///< candidate values
-	                 , const T& ref_values               ///< reference values
-	                 , F&& ffield                        ///< maps reference values to candidate values manifold
-	                 , vuh::debug_reporter_t report_cbk=nullptr ///< error reporter
-	                 , const char* layer_msg=nullptr     ///< base part of the log message about unsuccessful candidate value
-	                 )-> std::vector<const char*>
-	{
-		using std::begin;
-		for(const auto& l: tst_values){
-			if(contains(l, ref_values, ffield)){
-				old_values.push_back(l);
-			} else {
-				if(report_cbk != nullptr){
-					auto msg = std::string("value ") + l + " is missing";
-					report_cbk({}, {}, 0, 0, 0, layer_msg, msg.c_str(), nullptr);
-				}
-			}
-		}
-		return old_values;
-	}
-
-	template<class Ex, class U>
-	auto find_missing_and_throw(const std::vector<const char*>& V, const std::vector<U>& E)->void {
-		// find the layer/extension that is missing
-		for (const auto& v : V) {
-			if (!contains(v, E, [](const char* s) { return s; })) {
-				throw Ex(v);
-			}
-		}
-	}
 
 	/// Filter requested layers, throw away those not present on particular instance.
 	/// Add default validation layers to debug build.
@@ -79,11 +32,6 @@ namespace {
 
 		if (all_required && default_layers.size() != (r.size() - layers.size()))
 			find_missing_and_throw<vuh::LayerNotFound>(layers, r);
-
-		// add any vendor layers that might exist them to the list
-		// we don't care if any don't make it
-		r = filter_list(std::move(r), vendor_layers, avail_layers
-						, [](const auto& l){return l.layerName;});
 
 		return r;
 	}
@@ -104,11 +52,6 @@ namespace {
 		
 		if (all_required && extensions.size() != (r.size() - extensions.size()))
 			find_missing_and_throw<vuh::ExtensionNotFound>(extensions, r);
-
-		// add any vendor extensions that might exist them to the list
-		// we don't care if any don't make it
-		r = filter_list(std::move(r), vendor_extensions, avail_extensions
-						, [](const auto& e){return e.extensionName;});
 			
 		return r;
 	}
@@ -173,11 +116,11 @@ namespace vuh {
 	                   , const vk::ApplicationInfo& info
 	                   , debug_reporter_t report_callback
 	                   )
-	   : _instance(createInstance(filter_layers(layers), filter_extensions(extensions), info))
+	   : _layers(filter_layers(layers))
+	   , _extensions(filter_extensions(extensions))
+	   , _instance(createInstance(_layers, _extensions, info))
 	   , _reporter(report_callback ? report_callback : debugReporter)
 	   , _reporter_cbk(registerReporter(_instance, _reporter))
-	   , _layers(filter_layers(layers))
-	   , _extensions(filter_extensions(extensions))
 	{}
 
 	/// Clean instance resources.

@@ -18,7 +18,7 @@ namespace vuh {
 	class Instance {
 	public:
 		explicit Instance(const std::vector<const char*>& layers={}
-		                 , const std::vector<const char*>& extension={}
+		                 , const std::vector<const char*>& extensions={}
 		                 , const vk::ApplicationInfo& info={nullptr, 0, nullptr, 0, VK_API_VERSION_1_0}
 		                 , debug_reporter_t report_callback=nullptr
 		                 );
@@ -40,10 +40,10 @@ namespace vuh {
 	private: // helpers
 		auto clear() noexcept-> void;
 	private: // data
+		const std::vector<const char*> _layers; ///< enabled layers
+		const std::vector<const char*> _extensions; ///< enabled extensions
 		vk::Instance _instance;     ///< vulkan instance
 		debug_reporter_t _reporter; ///< points to actual reporting function. This pointer is registered with a reporter callback but can also be used directly.
 		VkDebugReportCallbackEXT _reporter_cbk; ///< report callback. Only used to release the handle in the end.
-		const std::vector<const char*> _layers; ///< enabled layers
-		const std::vector<const char*> _extensions; ///< enabled extensions
 	}; // class Instance
 } // namespace vuh

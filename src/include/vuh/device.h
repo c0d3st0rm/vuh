@@ -17,7 +17,8 @@ namespace vuh {
 	/// different threads.
 	class Device: public vk::Device {
 	public:
-		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physdevice);
+		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physDevice
+						, const std::vector<const char*>& extensions={});
 		~Device() noexcept;
 
 		Device(const Device&);
@@ -50,12 +51,15 @@ namespace vuh {
 		auto releaseComputeCmdBuffer()-> vk::CommandBuffer;
 		
 	private: // helpers
-		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physdevice
-		                , const std::vector<vk::QueueFamilyProperties>& families);
-		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physdevice
-	                   , uint32_t computeFamilyId, uint32_t transferFamilyId);
+		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physDevice
+		                , const std::vector<vk::QueueFamilyProperties>& families
+						, const std::vector<const char*>& extensions={});
+		explicit Device(vuh::Instance& instance, vk::PhysicalDevice physDevice
+	                   , uint32_t computeFamilyId, uint32_t transferFamilyId
+					   , const std::vector<const char*>& extensions={});
 		auto release() noexcept-> void;
 	private: // data
+		const std::vector<const char*> _extensions; ///< enabled extensions
 		vuh::Instance&     _instance;           ///< refer to Instance object used to create device
 		vk::PhysicalDevice _physdev;            ///< handle to associated physical device
 		vk::CommandPool    _cmdpool_compute;    ///< handle to command pool for compute commands
