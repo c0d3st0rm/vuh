@@ -8,7 +8,10 @@
 
 namespace {
 	/// Vendor-specific extensions which provide useful features
-	static const std::array<const char*, 1> vendor_device_extensions = {"VK_AMD_shader_core_properties"};
+	static const std::array<const char*, 2> vendor_device_extensions = {
+		"VK_KHR_get_physical_device_properties2",	// required by VK_AMD_shader_core_properties - TODO is there a way to not load it if
+		"VK_AMD_shader_core_properties"				// VK_KHR_get_physical_device_properties2 does not load?
+	};
 
 	/// Filter through the device's extensions
 	auto filter_extensions(vk::PhysicalDevice& physicalDevice, const std::vector<const char*>& extensions
