@@ -1,5 +1,6 @@
 #include "vuh/instance.h"
 #include "vuh/device.h"
+#include "vuh/error.h"
 
 #include <algorithm>
 #include <array>
@@ -48,25 +49,53 @@ namespace {
 		return old_values;
 	}
 
+	template<class Ex, class U>
+	auto find_missing_and_throw(const std::vector<const char*>& V, const std::vector<U>& E)->void {
+		// find the layer/extension that is missing
+		for (const auto& v : V) {
+			if (!contains(v, E, [](const char* s) { return s; })) {
+				throw Ex(v);
+			}
+		}
+	}
+
 	/// Filter requested layers, throw away those not present on particular instance.
 	/// Add default validation layers to debug build.
-	auto filter_layers(const std::vector<const char*>& layers) {
+	auto filter_layers(const std::vector<const char*>& layers, bool all_required=true) {
 		const auto avail_layers = vk::enumerateInstanceLayerProperties();
 		auto r = filter_list({}, layers, avail_layers
 		                     , [](const auto& l){return l.layerName;});
+
+		if (all_required && layers.size() != r.size())
+			find_missing_and_throw<vuh::LayerNotFound>(layers, r);
+
+		// add default layers
 		r = filter_list(std::move(r), default_layers, avail_layers
 		                , [](const auto& l){return l.layerName;});
+
+		if (all_required && default_layers.size() != (r.size() - layers.size()))
+			find_missing_and_throw<vuh::LayerNotFound>(layers, r);
+
 		return r;
 	}
 
 	/// Filter requested extensions, throw away those not present on particular instance.
 	/// Add default debug extensions to debug build.
-	auto filter_extensions(const std::vector<const char*>& extensions) {
+	auto filter_extensions(const std::vector<const char*>& extensions, bool all_required=true) {
 		const auto avail_extensions = vk::enumerateInstanceExtensionProperties();
 		auto r = filter_list({}, extensions, avail_extensions
-		                     , [](const auto& l){return l.extensionName;});
+		                     , [](const auto& e){return e.extensionName;});
+		
+		if (all_required && extensions.size() != r.size())
+			find_missing_and_throw<vuh::ExtensionNotFound>(extensions, r);
+
+		// add default extensions
 		r = filter_list(std::move(r), default_extensions, avail_extensions
 		                , [](const auto& l){return l.extensionName;});
+		
+		if (all_required && extensions.size() != (r.size() - extensions.size()))
+			find_missing_and_throw<vuh::ExtensionNotFound>(extensions, r);
+			
 		return r;
 	}
 
@@ -101,8 +130,15 @@ namespace {
 		auto ret = VkDebugReportCallbackEXT(nullptr);
 		auto createInfo = VkDebugReportCallbackCreateInfoEXT{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+#ifndef NDEBUG
+		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT
+						   | VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+						   | VK_DEBUG_REPORT_DEBUG_BIT_EXT
+		                   | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+#else
 		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT
 		                   | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+#endif
 		createInfo.pfnCallback = reporter;
 
 		// explicitly load this function

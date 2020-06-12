@@ -21,4 +21,24 @@ namespace vuh {
 	   : std::runtime_error(message)
 	{}
 
+	/// Constructs the exception object with explanatory string.
+	LayerNotFound::LayerNotFound(const std::string& message)
+	   : std::runtime_error(message)
+	{}
+
+	/// Constructs the exception object with explanatory string.
+	LayerNotFound::LayerNotFound(const char* message)
+	   : std::runtime_error(message)
+	{}
+
+	/// Constructs the exception object with explanatory string.
+	ExtensionNotFound::ExtensionNotFound(const std::string& message)
+	   : std::runtime_error(message)
+	{}
+
+	/// Constructs the exception object with explanatory string.
+	ExtensionNotFound::ExtensionNotFound(const char* message)
+	   : std::runtime_error(message)
+	{}
+
 } // namespace vuh

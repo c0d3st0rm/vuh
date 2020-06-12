@@ -17,4 +17,18 @@ namespace vuh {
 		FileReadFailure(const std::string& message);
 		FileReadFailure(const char* message);
 	};
+
+	// Exception indicating a mandatory requested layer was not found
+	class LayerNotFound: public std::runtime_error {
+	public:
+		LayerNotFound(const std::string& message);
+		LayerNotFound(const char* message);
+	};
+
+	// Exception indicating a mandatory requested extension was not found
+	class ExtensionNotFound: public std::runtime_error {
+	public:
+		ExtensionNotFound(const std::string& message);
+		ExtensionNotFound(const char* message);
+	};
 } // namespace vuh
