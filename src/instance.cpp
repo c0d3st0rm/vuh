@@ -19,6 +19,10 @@ namespace {
 	static const std::array<const char*, 0> default_extensions = {};
 #endif
 
+	/// Vendor-specific layers and extensions which provide useful features
+	static const std::array<const char*, 1> vendor_layers = {"VK_AMD_shader_core_properties"};
+	static const std::array<const char*, 0> vendor_extensions = {};
+
 	/// @return true if value x can be extracted from an array with a given function
 	template<class U, class F>
 	auto contains(const char* x, const std::vector<U>& array, F&& fun)-> bool {
@@ -76,6 +80,11 @@ namespace {
 		if (all_required && default_layers.size() != (r.size() - layers.size()))
 			find_missing_and_throw<vuh::LayerNotFound>(layers, r);
 
+		// add any vendor layers that might exist them to the list
+		// we don't care if any don't make it
+		r = filter_list(std::move(r), vendor_layers, avail_layers
+						, [](const auto& l){return l.layerName;});
+
 		return r;
 	}
 
@@ -95,6 +104,11 @@ namespace {
 		
 		if (all_required && extensions.size() != (r.size() - extensions.size()))
 			find_missing_and_throw<vuh::ExtensionNotFound>(extensions, r);
+
+		// add any vendor extensions that might exist them to the list
+		// we don't care if any don't make it
+		r = filter_list(std::move(r), vendor_extensions, avail_extensions
+						, [](const auto& e){return e.extensionName;});
 			
 		return r;
 	}
@@ -155,13 +169,15 @@ namespace vuh {
 	/// Creates Instance object.
 	/// In debug build in addition to user-defined layers attempts to load validation layers.
 	Instance::Instance(const std::vector<const char*>& layers
-	                   , const std::vector<const char*>& extension
+	                   , const std::vector<const char*>& extensions
 	                   , const vk::ApplicationInfo& info
 	                   , debug_reporter_t report_callback
 	                   )
-	   : _instance(createInstance(filter_layers(layers), filter_extensions(extension), info))
+	   : _instance(createInstance(filter_layers(layers), filter_extensions(extensions), info))
 	   , _reporter(report_callback ? report_callback : debugReporter)
 	   , _reporter_cbk(registerReporter(_instance, _reporter))
+	   , _layers(filter_layers(layers))
+	   , _extensions(filter_extensions(extensions))
 	{}
 
 	/// Clean instance resources.
@@ -222,5 +238,15 @@ namespace vuh {
 	                      ) const-> void
 	{
 		_reporter(flags, VkDebugReportObjectTypeEXT{}, 0, 0, 0 , prefix, message, nullptr);
+	}
+
+	auto Instance::layers() const noexcept-> const std::vector<const char*>
+	{
+		return _layers;
+	}
+
+	auto Instance::extensions() const noexcept-> const std::vector<const char*>
+	{
+		return _extensions;
 	}
 } // namespace vuh
