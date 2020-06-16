@@ -175,6 +175,15 @@ namespace vuh {
 		return _physdev.getProperties();
 	}
 
+	/// @return physical device driver properties
+	auto Device::driverProperties() const-> vk::PhysicalDeviceDriverProperties {
+		vk::PhysicalDeviceDriverProperties deviceDriverProperties;
+		vk::PhysicalDeviceProperties2 properties;
+		properties.pNext = reinterpret_cast<vk::PhysicalDeviceProperties2*>(&deviceDriverProperties);
+		_physdev.getProperties2(&properties);
+		return deviceDriverProperties;
+	}
+
 	/// @return memory properties of the memory with given id
 	auto Device::memoryProperties(uint32_t id) const-> vk::MemoryPropertyFlags {
 		return _physdev.getMemoryProperties().memoryTypes[id].propertyFlags;

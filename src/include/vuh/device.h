@@ -27,6 +27,7 @@ namespace vuh {
 		friend auto swap(Device& d1, Device& d2)-> void;
 
 		auto properties() const-> vk::PhysicalDeviceProperties;
+		auto driverProperties() const-> vk::PhysicalDeviceDriverProperties;
 		auto numComputeQueues() const-> uint32_t { return 1u;}
 		auto numTransferQueues() const-> uint32_t { return 1u;}
 		auto memoryProperties(uint32_t id) const-> vk::MemoryPropertyFlags;
